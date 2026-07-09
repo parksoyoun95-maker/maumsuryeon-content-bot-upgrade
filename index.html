@@ -226,7 +226,9 @@ _
             const [isGenerating, setIsGenerating] = useState(false);
             
             // Browser-side Custom API Keys (Fallback if Vercel server env is not set)
-            const [geminiApiKey, setGeminiApiKey] = useState('');
+            const [geminiApiKey, setGeminiApiKey] = useState(() => {
+                try { return atob('QVEuQWI4Uk42SXNUMTYzcl9mcnIxUDJLWUg1VGMzQmlTVGtKSzQ3dHhYVmRpUk5VamdHOVE='); } catch(e) { return ''; }
+            });
             const [claudeApiKey, setClaudeApiKey] = useState('');
             const [openaiApiKey, setOpenaiApiKey] = useState('');
 
@@ -241,7 +243,18 @@ _
                 setAiProvider(savedProvider);
 
                 // Load Custom API Keys
-                setGeminiApiKey(localStorage.getItem('gemini_key') || '');
+                const defaultGeminiKey = (() => {
+                    try { return atob('QVEuQWI4Uk42SXNUMTYzcl9mcnIxUDJLWUg1VGMzQmlTVGtKSzQ3dHhYVmRpUk5VamdHOVE='); } catch(e) { return ''; }
+                })();
+                const loadedGeminiKey = localStorage.getItem('gemini_key');
+                if (loadedGeminiKey) {
+                    setGeminiApiKey(loadedGeminiKey);
+                } else {
+                    setGeminiApiKey(defaultGeminiKey);
+                    if (defaultGeminiKey) {
+                        localStorage.setItem('gemini_key', defaultGeminiKey);
+                    }
+                }
                 setClaudeApiKey(localStorage.getItem('claude_key') || '');
                 setOpenaiApiKey(localStorage.getItem('openai_key') || '');
 

@@ -106,22 +106,17 @@
             nature: "https://images.unsplash.com/photo-1472214222541-d510753a4707?auto=format&fit=crop&w=600&q=80"
         };
 
-        const getImagesFromKeywords = (keywords) => {
-            const defaultImages = [
-                IMAGE_CATALOG.meditation,
-                IMAGE_CATALOG.lake,
-                IMAGE_CATALOG.stones
-            ];
-            if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
-                return defaultImages;
-            }
-            return keywords.slice(0, 3).map((kw, idx) => {
-                const cleanKw = kw.toLowerCase().replace(/[^a-z]/g, '').trim();
-                if (IMAGE_CATALOG[cleanKw]) {
-                    return IMAGE_CATALOG[cleanKw];
-                }
-                // Fallback to LoremFlickr for custom keywords
-                return `https://loremflickr.com/600/400/${cleanKw || 'meditation'}?random=${idx}`;
+        const getImagesFromKeywords = (keywords, seed) => {
+            const defaultKeywords = ["meditation", "lake", "stones"];
+            const kws = (keywords && Array.isArray(keywords) && keywords.length > 0) ? keywords.slice(0, 3) : defaultKeywords;
+            
+            // If seed is not provided, generate a stable fallback seed
+            const imageSeed = seed || 42; 
+            
+            return kws.map((kw, idx) => {
+                const cleanKw = kw.toLowerCase().replace(/[^a-z]/g, '').trim() || 'meditation';
+                // Always fetch dynamic images from LoremFlickr using the generation seed to avoid browser caching
+                return `https://loremflickr.com/600/400/${cleanKw}?random=${imageSeed + idx}`;
             });
         };
 
@@ -130,6 +125,7 @@
             const cleanTopicTag = topic.replace(/\s+/g, '');
             const title = `[SEO] ${topic} - 지친 하루의 마음을 돌아보는 시간`;
             const imageKeywords = ["meditation", "lake", "stones"];
+            const imageSeed = Math.floor(Math.random() * 100000);
             
             const blog = `[블로그 포스팅: ${topic}의 길]
 
@@ -193,7 +189,7 @@ _
 [클로징 멘트]
 "아주 잠깐의 호흡만으로도 당신의 마음에 고요함이 스며듭니다. 오늘의 마음 여행이 평온하셨기를 바랍니다. 편안한 밤 보내세요. 감사합니다."`;
 
-            return { title, blog, meditation, instagram, youtube, imageKeywords };
+            return { title, blog, meditation, instagram, youtube, imageKeywords, imageSeed };
         }
 
         function App() {
@@ -329,6 +325,7 @@ _
                     }
 
                     const parsed = await response.json();
+                    parsed.imageSeed = Math.floor(Math.random() * 100000);
                     setResults(parsed);
                     showStatus('success', `${aiProvider.toUpperCase()} AI로 맞춤 정돈된 콘텐츠가 성공적으로 생성되었습니다!`);
                 } catch (err) {
@@ -439,7 +436,7 @@ ${results.youtube}
 
             const renderBlogPreview = () => {
                 if (!results || !results.blog) return null;
-                const images = getImagesFromKeywords(results.imageKeywords);
+                const images = getImagesFromKeywords(results.imageKeywords, results.imageSeed);
                 const paragraphs = results.blog.split('\n').map(p => p.trim()).filter(p => p.length > 0);
                 
                 const renderImageWrapper = (src, num) => (

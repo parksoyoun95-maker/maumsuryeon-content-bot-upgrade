@@ -106,11 +106,25 @@
             nature: "https://images.unsplash.com/photo-1472214222541-d510753a4707?auto=format&fit=crop&w=600&q=80"
         };
 
-        const getImagesFromKeywords = (keywords, seed) => {
+        const getImagesFromKeywords = (keywords, seed, imageUrls) => {
+            // If the server pre-fetched premium Unsplash imageUrls, use them!
+            if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
+                const imageSeed = seed || 0;
+                return imageUrls.slice(0, 3).map((list, idx) => {
+                    if (Array.isArray(list) && list.length > 0) {
+                        // Pick an image dynamically from the list using the seed to allow cycling
+                        const imgIdx = (imageSeed + idx) % list.length;
+                        return list[imgIdx];
+                    }
+                    // Fallback for this specific keyword if list is empty
+                    const kw = (keywords && keywords[idx]) ? keywords[idx] : 'meditation';
+                    const cleanKw = kw.toLowerCase().replace(/[^a-z]/g, '').trim() || 'meditation';
+                    return `https://loremflickr.com/600/400/${cleanKw}?random=${imageSeed + idx}`;
+                });
+            }
+
             const defaultKeywords = ["meditation", "lake", "stones"];
             const kws = (keywords && Array.isArray(keywords) && keywords.length > 0) ? keywords.slice(0, 3) : defaultKeywords;
-            
-            // If seed is not provided, generate a stable fallback seed
             const imageSeed = seed || 42; 
             
             return kws.map((kw, idx) => {
@@ -455,7 +469,7 @@ ${results.youtube}
 
             const renderBlogPreview = () => {
                 if (!results || !results.blog) return null;
-                const images = getImagesFromKeywords(results.imageKeywords, results.imageSeed);
+                const images = getImagesFromKeywords(results.imageKeywords, results.imageSeed, results.imageUrls);
                 const paragraphs = results.blog.split('\n').map(p => p.trim()).filter(p => p.length > 0);
                 
                 const renderImageWrapper = (src, num) => (

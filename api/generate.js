@@ -102,10 +102,69 @@ export default async function handler(req, res) {
         
         // Parse and return JSON
         const parsed = JSON.parse(resultText);
+
+        try {
+            parsed.imageUrls = await fetchUnsplashImages(parsed.imageKeywords);
+        } catch (imgErr) {
+            console.error('Failed to fetch Unsplash images:', imgErr);
+        }
+
         return res.status(200).json(parsed);
 
     } catch (error) {
         console.error('Serverless generation error:', error);
         return res.status(500).json({ error: error.message || '콘텐츠 생성 과정에서 오류가 발생했습니다.' });
+    }
+}
+
+// Helper to fetch premium Unsplash search results without an API key using the NAPI endpoint
+async function fetchUnsplashImages(keywords) {
+    const defaultImages = [
+        [
+            "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=600&q=80",
+            "https://images.unsplash.com/photo-1545389336-cf090694435e?auto=format&fit=crop&w=600&q=80"
+        ],
+        [
+            "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&q=80",
+            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80"
+        ],
+        [
+            "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=600&q=80",
+            "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=600&q=80"
+        ]
+    ];
+    
+    if (!keywords || !Array.isArray(keywords)) return defaultImages;
+    
+    try {
+        const promises = keywords.slice(0, 3).map(async (kw) => {
+            const cleanKw = kw.toLowerCase().replace(/[^a-z]/g, '').trim() || 'meditation';
+            try {
+                const response = await fetch(`https://unsplash.com/napi/search/photos?query=${encodeURIComponent(cleanKw)}&per_page=12`, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    }
+                });
+                if (!response.ok) throw new Error('Unsplash NAPI response not OK');
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    // Extract regular/small size Unsplash images
+                    return data.results.map(r => r.urls.small || r.urls.regular);
+                }
+            } catch (err) {
+                console.error(`Error fetching Unsplash for keyword "${cleanKw}":`, err);
+            }
+            // Fallback: return a few LoremFlickr URLs with unique seeds if NAPI fails
+            return [
+                `https://loremflickr.com/600/400/${cleanKw}?random=1`,
+                `https://loremflickr.com/600/400/${cleanKw}?random=2`,
+                `https://loremflickr.com/600/400/${cleanKw}?random=3`
+            ];
+        });
+        
+        return await Promise.all(promises);
+    } catch (e) {
+        console.error('fetchUnsplashImages overall failure:', e);
+        return defaultImages;
     }
 }

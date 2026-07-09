@@ -210,6 +210,11 @@ _
             // AI Provider Config State (Gemini / Claude / OpenAI via Serverless)
             const [aiProvider, setAiProvider] = useState('gemini');
             const [isGenerating, setIsGenerating] = useState(false);
+            
+            // Browser-side Custom API Keys (Fallback if Vercel server env is not set)
+            const [geminiApiKey, setGeminiApiKey] = useState('');
+            const [claudeApiKey, setClaudeApiKey] = useState('');
+            const [openaiApiKey, setOpenaiApiKey] = useState('');
 
             // Load Initial Data
             useEffect(() => {
@@ -220,6 +225,11 @@ _
                 // Load AI Provider if saved
                 const savedProvider = localStorage.getItem('ai_provider') || 'gemini';
                 setAiProvider(savedProvider);
+
+                // Load Custom API Keys
+                setGeminiApiKey(localStorage.getItem('gemini_key') || '');
+                setClaudeApiKey(localStorage.getItem('claude_key') || '');
+                setOpenaiApiKey(localStorage.getItem('openai_key') || '');
 
                 // Try to load Env values from window/localStorage or input
                 const savedUrl = localStorage.getItem('sb_url') || '';
@@ -298,12 +308,17 @@ _
             };
 
             const handleGenerate = async () => {
-                if (!inputText.trim() || !topic.trim()) {
-                    showStatus('error', '원본 글과 명상 주제를 입력해 주세요.');
+                if (!inputText.trim()) {
+                    showStatus('error', '생각과 감정 원본 글을 입력해 주세요.');
                     return;
                 }
                 setIsGenerating(true);
                 showStatus('info', 'AI 콘텐츠를 생성하는 중입니다...');
+
+                let keyToPass = '';
+                if (aiProvider === 'gemini') keyToPass = geminiApiKey;
+                else if (aiProvider === 'claude') keyToPass = claudeApiKey;
+                else if (aiProvider === 'openai') keyToPass = openaiApiKey;
 
                 try {
                     // Call the Vercel serverless backend endpoint
@@ -315,7 +330,8 @@ _
                         body: JSON.stringify({
                             inputText: inputText.trim(),
                             topic: topic.trim(),
-                            provider: aiProvider
+                            provider: aiProvider,
+                            apiKey: keyToPass ? keyToPass.trim() : undefined
                         })
                     });
 
@@ -584,28 +600,83 @@ ${results.youtube}
                             {/* AI Model Settings */}
                             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                                 <h2 className="text-lg font-semibold text-slate-900 mb-2">🤖 AI 엔진 선택 (서버리스 구동)</h2>
-                                <p className="text-sm text-slate-500 mb-4">원하는 AI 모델을 선택하여 정돈 및 자연스러운 윤문을 진행하세요. (API Key는 백엔드 서버에 안전하게 등록되어 있어 별도 입력이 필요 없습니다.)</p>
+                                <p className="text-sm text-slate-500 mb-4">원하는 AI 모델을 선택하여 정돈 및 자연스러운 윤문을 진행하세요. Vercel 서버의 API Key를 활용하거나 아래에 본인의 API Key를 직접 입력하여 구동할 수 있습니다.</p>
                                 <div className="space-y-3">
-                                    <label className="block text-xs font-medium text-slate-700">사용할 AI 모델</label>
-                                    <select 
-                                        value={aiProvider}
-                                        onChange={(e) => {
-                                            setAiProvider(e.target.value);
-                                            localStorage.setItem('ai_provider', e.target.value);
-                                        }}
-                                        className="w-full text-sm rounded-lg border-slate-200 p-2 border focus:ring-1 focus:ring-blue-500 bg-white"
-                                    >
-                                        <option value="gemini">Google Gemini 1.5 Flash (기본값)</option>
-                                        <option value="claude">Anthropic Claude 3.5 Sonnet</option>
-                                        <option value="openai">OpenAI GPT-4o Mini</option>
-                                    </select>
-                                    <div className="mt-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg">
-                                        <p className="text-[10px] text-blue-700 leading-normal">
-                                            * **배포 권장**: 이 기능은 Vercel에 배포된 환경에서 정상 작동합니다. 로컬 실행(.html 더블클릭) 시에는 백엔드가 가동되지 않아 로컬 기본 템플릿으로 대체 동작합니다.
-                                        </p>
+                                    <div className="space-y-1">
+                                        <label className="block text-xs font-semibold text-slate-700">사용할 AI 모델</label>
+                                        <select 
+                                            value={aiProvider}
+                                            onChange={(e) => {
+                                                setAiProvider(e.target.value);
+                                                localStorage.setItem('ai_provider', e.target.value);
+                                            }}
+                                            className="w-full text-sm rounded-lg border-slate-200 p-2 border focus:ring-1 focus:ring-blue-500 bg-white"
+                                        >
+                                            <option value="gemini">Google Gemini 1.5 Flash (무료 플랜 지원)</option>
+                                            <option value="claude">Anthropic Claude 3.5 Sonnet</option>
+                                            <option value="openai">OpenAI GPT-4o Mini</option>
+                                        </select>
                                     </div>
-                                </div>
-                            </div>
+
+                                    {/* API Key Inputs */}
+                                    <div className="space-y-2 pt-1 border-t border-slate-100">
+                                        {aiProvider === 'gemini' && (
+                                            <div className="space-y-1">
+                                                <label className="block text-[11px] font-semibold text-slate-600">Gemini API Key 입력 (무료 플랜용)</label>
+                                                <input 
+                                                    type="password" 
+                                                    placeholder="Google Gemini API Key 입력" 
+                                                    value={geminiApiKey}
+                                                    onChange={(e) => {
+                                                        setGeminiApiKey(e.target.value);
+                                                        localStorage.setItem('gemini_key', e.target.value);
+                                                    }}
+                                                    className="w-full text-xs rounded-lg border-slate-200 p-2 border focus:ring-1 focus:ring-blue-500"
+                                                />
+                                                <p className="text-[10px] text-slate-400 leading-normal">
+                                                    * 카드 결제 등록 없이 평생 무료로 제공되는 <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline font-semibold">Google AI Studio</a>에서 API 키를 발급받아 입력하시면 즉시 구동됩니다.
+                                                </p>
+                                            </div>
+                                        )}
+                                        {aiProvider === 'claude' && (
+                                            <div className="space-y-1">
+                                                <label className="block text-[11px] font-semibold text-slate-600">Claude API Key 입력</label>
+                                                <input 
+                                                    type="password" 
+                                                    placeholder="Anthropic Claude API Key 입력" 
+                                                    value={claudeApiKey}
+                                                    onChange={(e) => {
+                                                        setClaudeApiKey(e.target.value);
+                                                        localStorage.setItem('claude_key', e.target.value);
+                                                    }}
+                                                    className="w-full text-xs rounded-lg border-slate-200 p-2 border focus:ring-1 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                        )}
+                                        {aiProvider === 'openai' && (
+                                            <div className="space-y-1">
+                                                <label className="block text-[11px] font-semibold text-slate-600">OpenAI API Key 입력</label>
+                                                <input 
+                                                    type="password" 
+                                                    placeholder="OpenAI API Key 입력" 
+                                                    value={openaiApiKey}
+                                                    onChange={(e) => {
+                                                        setOpenaiApiKey(e.target.value);
+                                                        localStorage.setItem('openai_key', e.target.value);
+                                                     }}
+                                                     className="w-full text-xs rounded-lg border-slate-200 p-2 border focus:ring-1 focus:ring-blue-500"
+                                                 />
+                                             </div>
+                                         )}
+                                     </div>
+
+                                     <div className="mt-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg">
+                                         <p className="text-[10px] text-blue-700 leading-normal">
+                                             * **작동 팁**: API Key는 브라우저 로컬 저장소에만 안전하게 암호화되어 저장됩니다. Vercel 서버에 매번 환경 변수를 등록할 필요 없이 이곳에 키를 한 번 입력해 두시면 즉시 사용 가능합니다.
+                                         </p>
+                                     </div>
+                                 </div>
+                             </div>
 
                             {/* Database settings */}
                             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">

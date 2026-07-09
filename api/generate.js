@@ -30,8 +30,8 @@ export default async function handler(req, res) {
         let resultText = '';
 
         if (selectedProvider === 'gemini') {
-            const apiKey = process.env.GEMINI_API_KEY;
-            if (!apiKey) throw new Error('GEMINI_API_KEY가 설정되지 않았습니다. Vercel 환경 변수를 확인해 주세요.');
+            const apiKey = process.env.GEMINI_API_KEY || req.body.apiKey;
+            if (!apiKey) throw new Error('GEMINI_API_KEY가 설정되지 않았습니다. 화면 설정에서 API Key를 입력하시거나 Vercel 환경 변수를 확인해 주세요.');
 
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                 method: 'POST',
@@ -48,8 +48,8 @@ export default async function handler(req, res) {
             resultText = data.candidates[0].content.parts[0].text;
 
         } else if (selectedProvider === 'claude') {
-            const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-            if (!apiKey) throw new Error('CLAUDE_API_KEY 또는 ANTHROPIC_API_KEY가 설정되지 않았습니다. Vercel 환경 변수를 확인해 주세요.');
+            const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || req.body.apiKey;
+            if (!apiKey) throw new Error('CLAUDE_API_KEY가 설정되지 않았습니다. 화면 설정에서 API Key를 입력하시거나 Vercel 환경 변수를 확인해 주세요.');
 
             const response = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
@@ -72,8 +72,8 @@ export default async function handler(req, res) {
             resultText = data.content[0].text;
 
         } else if (selectedProvider === 'openai') {
-            const apiKey = process.env.OPENAI_API_KEY;
-            if (!apiKey) throw new Error('OPENAI_API_KEY가 설정되지 않았습니다. Vercel 환경 변수를 확인해 주세요.');
+            const apiKey = process.env.OPENAI_API_KEY || req.body.apiKey;
+            if (!apiKey) throw new Error('OPENAI_API_KEY가 설정되지 않았습니다. 화면 설정에서 API Key를 입력하시거나 Vercel 환경 변수를 확인해 주세요.');
 
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
